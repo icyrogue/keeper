@@ -1,0 +1,145 @@
+* A tool for monitoring and maintaining the relevance of an electronic components list
+
+** Technical requirements 
+
+   - Create component list to track from existing BOM fail
+
+   - JWT token authentication 
+
+   - Notify a user when availability of a component in a list changes
+
+   - Notifications should contain alternatives to unavailable electronic component
+
+   - Add and delete individual items from the list of components to track 
+
+** Example notification
+
+   [example.md](example.md)
+
+** Example service interaction scenario
+
+   0. User gets an API token tied to an E-Mail address for notifications and authentication
+
+   1. User creates a new list
+
+   2. User uploads components from BOM file or adds them using JSON
+
+   3. Service makes requests to EFind API to check individual components availability
+
+   4. If component from a list is no longer available, user gets E-Mail notification containing possible alternatives to given item 
+
+   5. User can stop or start tracking of individual component in a list
+
+   6. User can create multiple lists of components to track
+
+** User story
+
+   >As *inventory manager* I can easily track electronic components from pre-existing BOM file and 
+
+   >get notifications when any from it becomes unavailable
+
+
+
+   >As *electronic engineer* I can add needed components for a new project to a tracking list and 
+
+   >review alternatives, if any electronic component isn't available
+
+** API methods
+
+*** Associate E-Mail with new API token
+
+    - ` POST api/login ` notifications will be sent to E-Mail in request body
+
+    - *Response*: JWT token for API authentication
+
+*** Working with tracking lists 
+
+    - ` POST api/list ` create a new list
+
+    - *Response:* new {list id}
+
+    - ` GET api/list/{list ID}?pageNum={page number}&pageSize={page size} ` get components from a list with given {list id}    
+
+    - *Example response:* 
+
+    @code javascript
+
+    {
+    "components": [
+    {
+    "Part name": "TL072",
+    "Placement": "IC2", 
+    "Package": "DIP8",
+    },
+    {
+    "Part name": "LTSA-E67RVAWT",
+    "Placement": "LED",
+    "Package": "SMD",
+    }],
+    "pageNumber": 1, //Page number from request parameters
+    "pageSize": 2 //Only two items will be displaed per page
+    }
+
+    @end
+
+    - ` POST api/list/{list id} ` add components to track to a list from JSON structure
+
+    - ` POST api/list/{list id}/bom ` add all the components from BOM file to list with {list id}
+
+    - ` POST api/list/{list id}/batch ` add all the components from JSON array of to list with {list id}
+
+    - ` PUT api/list/{list id} ` stop tracking component from JSON structure
+
+    - ` GET api/list/{list id}/schema ` get schema for a list with {list id}
+
+    - ` POST api/list/{list id}/schema ` add schema for a list with {list id}
+** Core concepts
+*** BOM
+    BOM (Bill Of Materials) is a file containing information about electronic components used in a project. Currently, the service supports ` csv ` as BOM file format for upload. The column with all electronic components names must be called ` Part name `
+*** JSON
+    Components for service to track are described using JSON structure 
+    - *Example:*
+    @code javascript
+ 
+    {
+    "Part name": "TL072",
+    "Placement": "IC2", 
+    "Package": "DIP8",
+    }
+
+    @end
+
+    Multiple components can be added at once using ` POST api/list/{list id}/batch` and JSON array of components
+    - *Example:*
+    @code javascript
+
+    [{
+    "Part name": "TL072",
+    "Placement": "IC2", 
+    "Package": "DIP8",
+    },
+    {
+    "Part name": "LTSA-E67RVAWT",
+    "Placement": "LED",
+    "Package": "SMD",
+    }]
+
+    @end
+*** Authentication
+    User authentication is implemented using JWT token linked to user E-Mail. Any requests to ` api/list/* ` require valid token in header ` Token `
+*** Schema
+    Schemas are used to describe information about list of components
+    - *Example:*
+    @code javascript
+    
+    {
+    "id": "zB7h8u12", //ID of a list 
+    "region": 1, //prefered region to track components in
+    "fieldNames": [ //list of all the items's field names in a list
+    "Placement",
+    "Part name",
+    "Package"
+        ]
+    }
+
+    @end
